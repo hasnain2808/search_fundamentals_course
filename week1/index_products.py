@@ -80,15 +80,16 @@ mappings =  [
 
         ]
 
-useful_keys = [
-    "id",
-    '_index',
-    "title",
-    "body",
-    "price",
-    "in_stock",
-    "category"
-]
+# use later to filter only fields that are needed to be indexed
+# useful_keys = [
+#     "id",
+#     '_index',
+#     "title",
+#     "body",
+#     "price",
+#     "in_stock",
+#     "category"
+# ]
 
 def get_opensearch():
     host = 'localhost'
@@ -106,15 +107,9 @@ def get_opensearch():
     return client
 
 def process_doc(doc, index_name):
-    return {
-        "id": doc["productId"][0] if doc["productId"] else None,
-        '_index': index_name,
-        "title": doc["name"][0] if doc["name"] else None,
-        "price": doc["regularPrice"][0] if doc["regularPrice"] else None,
-        "body":  doc["shortDescription"][0] if doc["shortDescription"] else None,
-        "category": doc["categoryPath"]  if doc["categoryPath"] else None
-    }
-
+    doc['id'] = doc['sku']
+    doc['_index'] = index_name
+    return doc
 
 def index_file(file, index_name):
     docs_indexed = 0

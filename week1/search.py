@@ -7,6 +7,8 @@ from flask import (
 
 from week1.opensearch import get_opensearch
 
+import json
+
 bp = Blueprint('search', __name__, url_prefix='/search')
 
 
@@ -51,7 +53,15 @@ def process_filters(filters_input):
             applied_filters += "&{}.fieldName={}&{}.key={}".format(filter, field, filter, key)
     print("Filters: {}".format(filters))
 
-    return filters, display_filters, applied_filters
+    ret = []
+    if filters:
+        ret.append(filters)
+    if display_filters:
+        ret.append(display_filters)
+    if applied_filters:
+        ret.append(applied_filters)
+
+    return ret
 
 
 
@@ -60,6 +70,7 @@ def process_filters(filters_input):
 def query():
     opensearch = get_opensearch() # Load up our OpenSearch client from the opensearch.py file.
     # Put in your code to query opensearch.  Set error as appropriate.
+    index_name = 'bbuy_products'
     error = None
     user_query = None
     query_obj = None
@@ -91,13 +102,16 @@ def query():
     else:
         query_obj = create_query("*", [], sort, sortDir)
 
-    print("query obj: {}".format(query_obj))
+    print("query obj: {}".format(json.dumps(query_obj)))
 
     #### Step 4.b.ii
-    response = None   # TODO: Replace me with an appropriate call to OpenSearch
+    response = opensearch.search(
+        body= query_obj,
+        index= index_name
+    )   # TODO: Replace me with an appropriate call to OpenSearch
     # Postprocess results here if you so desire
 
-    #print(response)
+    print(response)
     if error is None:
         return render_template("search_results.jinja2", query=user_query, search_response=response,
                                display_filters=display_filters, applied_filters=applied_filters,
@@ -106,16 +120,57 @@ def query():
         redirect(url_for("index"))
 
 
-def create_query(user_query, filters, sort="_score", sortDir="desc"):
+def create_query(user_query, filters=[], sort="_score", sortDir="desc"):
+    if not filters:
+        filters = []
+    print(filters)
+    print("process_filters(filters):  ", process_filters(filters))
     print("Query: {} Filters: {} Sort: {}".format(user_query, filters, sort))
     query_obj = {
         'size': 10,
         "query": {
-            "match_all": {} # Replace me with a query that both searches and filters
-        },
+            "bool": {
+            "must": [
+                {
+                    "query_string" : {
+                        "query" : "city",
+                        "phrase_slop": 3,
+                        "fields": ["name", "shortDescription", "longDescription"]
+                    # Replace me with a query that both searches and filters
+                    },
+                }],
+                "filter": process_filters(filters)
+
+            }
+        },    
         "aggs": {
             #### Step 4.b.i: create the appropriate query and aggregations here
-
-        }
+            "regularPrice": {
+                "range": {
+                    "field": "regularPrice",
+                    "ranges": [
+                    { "to": 100.0 },
+                    { "from": 100.0, "to": 200.0 },
+                    { "from": 200.0 }
+                    ]
+                }
+            },
+            "department": {
+                "terms": { "field": "department" }
+            },
+            "missing_images": {
+                "missing": { "field": "image" }
+            }
+        },
+        "highlight": {
+            "fields": {
+            "shortDescription": {},
+            "longDescription": {}
+            }
+        },
+        "sort": [
+            { sort: { "order": sortDir } }
+        ]
     }
+    print(json.dumps(query_obj))
     return query_obj

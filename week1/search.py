@@ -53,15 +53,8 @@ def process_filters(filters_input):
             applied_filters += "&{}.fieldName={}&{}.key={}".format(filter, field, filter, key)
     print("Filters: {}".format(filters))
 
-    ret = []
-    if filters:
-        ret.append(filters)
-    if display_filters:
-        ret.append(display_filters)
-    if applied_filters:
-        ret.append(applied_filters)
 
-    return ret
+    return filters, display_filters, applied_filters
 
 
 
@@ -133,14 +126,12 @@ def create_query(user_query, filters=[], sort="_score", sortDir="desc"):
             "must": [
                 {
                     "query_string" : {
-                        "query" : "city",
+                        "query" : user_query,
                         "phrase_slop": 3,
                         "fields": ["name", "shortDescription", "longDescription"]
-                    # Replace me with a query that both searches and filters
                     },
                 }],
-                "filter": process_filters(filters)
-
+            "filter": filters
             }
         },    
         "aggs": {
@@ -156,7 +147,7 @@ def create_query(user_query, filters=[], sort="_score", sortDir="desc"):
                 }
             },
             "department": {
-                "terms": { "field": "department" }
+                "terms": { "field": "department.keyword" }
             },
             "missing_images": {
                 "missing": { "field": "image" }
@@ -172,5 +163,5 @@ def create_query(user_query, filters=[], sort="_score", sortDir="desc"):
             { sort: { "order": sortDir } }
         ]
     }
-    print(json.dumps(query_obj))
+
     return query_obj

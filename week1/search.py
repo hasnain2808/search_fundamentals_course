@@ -7,8 +7,6 @@ from flask import (
 
 from week1.opensearch import get_opensearch
 
-import json
-
 bp = Blueprint('search', __name__, url_prefix='/search')
 
 
@@ -94,8 +92,6 @@ def query():
         query_obj = create_query(user_query, filters, sort, sortDir)
     else:
         query_obj = create_query("*", [], sort, sortDir)
-
-    print("query obj: {}".format(json.dumps(query_obj)))
 
     #### Step 4.b.ii
     response = opensearch.search(

@@ -80,17 +80,6 @@ mappings =  [
 
         ]
 
-# use later to filter only fields that are needed to be indexed
-# useful_keys = [
-#     "id",
-#     '_index',
-#     "title",
-#     "body",
-#     "price",
-#     "in_stock",
-#     "category"
-# ]
-
 def get_opensearch():
     host = 'localhost'
     port = 9200

@@ -1,6 +1,55 @@
 {
   "settings": {
-    "index.refresh_interval": "5s"
+    "index.refresh_interval": "5s",
+    "analysis": {
+      "analyzer": {
+        "csv_analyzer": {
+          "tokenizer": "csv_tokenizer"
+        },
+        "english_shingle": {
+          "tokenizer":  "standard",
+          "filter": [
+            "english_possessive_stemmer",
+            "lowercase",
+            "english_stop",
+            "english_keywords",
+            "english_stemmer",
+            "shingle_no_unigram"
+          ]
+        }
+        
+      },
+      "tokenizer": {
+        "csv_tokenizer": {
+          "type": "pattern",
+          "pattern": ", "
+        }
+      },
+      "filter": {        
+        "english_stop": {
+          "type":       "stop",
+          "stopwords":  "_english_" 
+        },
+        "english_keywords": {
+          "type":       "keyword_marker",
+          "keywords":   ["example"] 
+        },
+        "english_stemmer": {
+          "type":       "stemmer",
+          "language":   "english"
+        },
+        "english_possessive_stemmer": {
+          "type":       "stemmer",
+          "language":   "possessive_english"
+        },
+        "shingle_no_unigram": {
+          "type": "shingle",
+          "min_shingle_size": 2,
+          "max_shingle_size": 3,
+          "output_unigrams": true
+        }
+      }
+    }
   },
   "mappings" : {
     "properties" : {
@@ -43,6 +92,7 @@
       },
       "categoryPathIds" : {
         "type" : "text",
+        "analyzer": "csv_analyzer",
         "fields" : {
           "keyword" : {
             "type" : "keyword",
@@ -89,6 +139,7 @@
       },
       "description" : {
         "type" : "text",
+        "analyzer": "english",
         "fields" : {
           "keyword" : {
             "type" : "keyword",
@@ -110,6 +161,7 @@
       },
       "frequentlyPurchasedWith" : {
         "type" : "text",
+        "analyzer": "csv_analyzer",
         "fields" : {
           "keyword" : {
             "type" : "keyword",
@@ -146,6 +198,7 @@
       },
       "longDescription" : {
         "type" : "text",
+        "analyzer": "english",
         "fields" : {
           "keyword" : {
             "type" : "keyword",
@@ -177,6 +230,7 @@
       },
       "name" : {
         "type" : "text",
+        "analyzer": "english_shingle",
         "fields" : {
           "keyword" : {
             "type" : "keyword",
@@ -227,6 +281,7 @@
       },
       "shortDescription" : {
         "type" : "text",
+        "analyzer": "english",
         "fields" : {
           "keyword" : {
             "type" : "keyword",

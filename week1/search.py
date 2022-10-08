@@ -104,7 +104,7 @@ def query():
     )   # TODO: Replace me with an appropriate call to OpenSearch
     # Postprocess results here if you so desire
 
-    print(response)
+    # print(response)
     if error is None:
         return render_template("search_results.jinja2", query=user_query, search_response=response,
                                display_filters=display_filters, applied_filters=applied_filters,
@@ -116,8 +116,8 @@ def query():
 def create_query(user_query, filters=[], sort="_score", sortDir="desc"):
     if not filters:
         filters = []
-    print(filters)
-    print("process_filters(filters):  ", process_filters(filters))
+    
+    
     print("Query: {} Filters: {} Sort: {}".format(user_query, filters, sort))
     query_obj = {
         "size": 10,

@@ -51,6 +51,7 @@ def process_filters(filters_input):
             applied_filters += "&{}.fieldName={}&{}.key={}".format(filter, field, filter, key)
     print("Filters: {}".format(filters))
 
+
     return filters, display_filters, applied_filters
 
 
@@ -60,6 +61,7 @@ def process_filters(filters_input):
 def query():
     opensearch = get_opensearch() # Load up our OpenSearch client from the opensearch.py file.
     # Put in your code to query opensearch.  Set error as appropriate.
+    index_name = 'bbuy_products'
     error = None
     user_query = None
     query_obj = None
@@ -91,13 +93,14 @@ def query():
     else:
         query_obj = create_query("*", [], sort, sortDir)
 
-    print("query obj: {}".format(query_obj))
-
     #### Step 4.b.ii
-    response = None   # TODO: Replace me with an appropriate call to OpenSearch
+    response = opensearch.search(
+        body= query_obj,
+        index= index_name
+    )   # TODO: Replace me with an appropriate call to OpenSearch
     # Postprocess results here if you so desire
 
-    #print(response)
+    # print(response)
     if error is None:
         return render_template("search_results.jinja2", query=user_query, search_response=response,
                                display_filters=display_filters, applied_filters=applied_filters,
@@ -106,16 +109,99 @@ def query():
         redirect(url_for("index"))
 
 
-def create_query(user_query, filters, sort="_score", sortDir="desc"):
+def create_query(user_query, filters=[], sort="_score", sortDir="desc"):
+    if not filters:
+        filters = []
+    
+    
     print("Query: {} Filters: {} Sort: {}".format(user_query, filters, sort))
     query_obj = {
-        'size': 10,
+        "size": 10,
         "query": {
-            "match_all": {} # Replace me with a query that both searches and filters
-        },
+            "bool": {
+                "must": [{
+                    "function_score": {
+                        "query": {
+                            "query_string" : {
+                                "query" : user_query,
+                                "phrase_slop": 3,
+                                "fields": ["name^100", "shortDescription", "longDescription"]
+                            },
+                        },
+                        "boost_mode": "multiply",
+                        "score_mode": "avg", 
+                        "functions": [
+                            {
+                                "field_value_factor": {
+                                    "field": "customerReviewAverage",
+                                    "missing": 2.5
+                                },
+                                "weight": 100
+                            },
+                            {
+                                "field_value_factor": {
+                                    "field": "customerReviewCount",
+                                    "missing": 0
+                                },
+                                "weight": 10
+                            },
+                            {
+                                "field_value_factor": {
+                                    "field": "salesRankLongTerm",
+                                    "missing": 100000000,
+                                    "modifier": "reciprocal"
+                                }
+                            },
+                            {
+                                "field_value_factor": {
+                                    "field": "salesRankMediumTerm",
+                                    "missing": 100000000,
+                                    "modifier": "reciprocal"
+                                }
+                            },
+                            {
+                                "field_value_factor": {
+                                    "field": "salesRankShortTerm",
+                                    "missing": 100000000,
+                                    "modifier": "reciprocal"
+                                }
+                            }
+                        ]
+                    }
+                }],
+            "filter": filters
+            }
+        },    
         "aggs": {
             #### Step 4.b.i: create the appropriate query and aggregations here
-
-        }
+            "regularPrice": {
+                "range": {
+                    "field": "regularPrice",
+                    "ranges": [
+                    { "to": 100.0 },
+                    { "from": 100.0, "to": 500.0 },
+                    { "from": 500.0, "to": 1000.0 },
+                    { "from": 1000.0, "to": 2000.0 },
+                    { "from": 2000.0 }
+                    ]
+                }
+            },
+            "department": {
+                "terms": { "field": "department.keyword" }
+            },
+            "missing_images": {
+                "missing": { "field": "image" }
+            }
+        },
+        "highlight": {
+            "fields": {
+            "shortDescription": {},
+            "longDescription": {}
+            }
+        },
+        "sort": [
+            { sort: { "order": sortDir } }
+        ]
     }
+
     return query_obj
